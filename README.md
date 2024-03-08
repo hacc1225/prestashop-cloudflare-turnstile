@@ -14,6 +14,7 @@
 - Reset password
 - Checkout Login
 - Checkout Register
+- Newsletter subscription
 
 ![Cloudflare Turnstile](screenshot.png)
 

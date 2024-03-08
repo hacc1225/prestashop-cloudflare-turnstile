@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2022 Pixel Développement
+ * Copyright (c) Since 2022 Pixel Développement and contributors
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -27,8 +27,11 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     public const FORM_PASSWORD = 'password';
     public const FORM_CHECKOUT_LOGIN = 'checkout-login';
     public const FORM_CHECKOUT_REGISTER = 'checkout-register';
+    public const FORM_NEWSLETTER = 'newsletter';
 
     protected $templateFile;
+
+    protected static $validationError;
 
     /**
      * Module's constructor.
@@ -36,7 +39,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     public function __construct()
     {
         $this->name = 'pixel_cloudflare_turnstile';
-        $this->version = '1.2.0';
+        $this->version = '1.2.1';
         $this->author = 'Pixel Open';
         $this->tab = 'front_office_features';
         $this->need_instance = 0;
@@ -76,6 +79,8 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         return parent::install() &&
             $this->registerHook('actionFrontControllerSetMedia') &&
             $this->registerHook('displayCustomerAccountForm') &&
+            $this->registerHook('displayNewsletterRegistration') &&
+            $this->registerHook('actionNewsletterRegistrationBefore') &&
             $this->registerHook('actionFrontControllerInitBefore');
     }
 
@@ -189,7 +194,49 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         }
 
         if ($this->canProcess(get_class($params['controller']), true)) {
-            $this->turnstileValidation();
+            $this->turnstileValidationAndRedirect();
+        }
+    }
+
+    /**
+     * Display turnstile widget on the create account form
+     *
+     * @return string
+     */
+    public function hookDisplayNewsletterRegistration($params)
+    {
+        if ($this->context->customer->isLogged()) {
+            return '';
+        }
+        if (!$this->isAvailable(self::FORM_NEWSLETTER)) {
+            return '';
+        }
+
+        return $this->renderWidget('displayNewsletterRegistration', []);
+    }
+
+    /**
+     * Hook to validate newsletter registration
+     *
+     * @param array $params
+     *
+     * @return void
+     *
+     */
+    public function hookActionNewsletterRegistrationBefore($params)
+    {
+        if ($this->isAvailable(self::FORM_NEWSLETTER)) {
+            if (!self::turnstileValidation()) {
+                  if (!empty(static::$validationError)) {
+                    $params['hookError'] = static::$validationError;
+                } else {
+                    $params['hookError'] = Context::getContext()->getTranslator()->trans(
+                        'Security validation error',
+                        [],
+                        'Modules.Pixelcloudflareturnstile.Shop'
+                    );
+                }
+            }
         }
     }
 
@@ -301,22 +348,42 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
      * @return void
      * @throws Exception
      */
-    public static function turnstileValidation(): void
+    public static function turnstileValidationAndRedirect(): void
     {
-        $referer = $_SERVER['HTTP_REFERER'] ?? 'index';
-        $cookie  = Context::getContext()->cookie;
+        if (!self::turnstileValidation()) {
+            $referer = $_SERVER['HTTP_REFERER'] ?? 'index';
 
+            if (!empty(static::$validationError)) {
+                $cookie  = Context::getContext()->cookie;
+                $cookie->__set(
+                    self::TURNSTILE_SESSION_ERROR_KEY,
+                    static::$validationError
+                );
+            }
+
+            Tools::redirect($referer);
+        }
+    }
+
+    /**
+     * Validate turnstile
+     *
+     * @return bool
+     * @throws Exception
+     */
+    public static function turnstileValidation(): bool
+    {
         $response = Tools::getValue('cf-turnstile-response');
         if (!$response) {
-            $cookie->__set(
-                self::TURNSTILE_SESSION_ERROR_KEY,
+            static::$validationError =
                 Context::getContext()->getTranslator()->trans(
                     'Please validate the security field.',
                     [],
                     'Modules.Pixelcloudflareturnstile.Shop'
                 )
-            );
-            Tools::redirect($referer);
+            ;
+
+            return false;
         }
 
         $data = [
@@ -332,23 +399,32 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
         curl_setopt($ch, CURLOPT_TIMEOUT, 3);
 
-        $result = json_decode(curl_exec($ch), true);
+        $curlResult = curl_exec($ch);
+        if (!$curlResult) {
+            static::$validationError ='Curl error: ' . curl_error($ch);
+
+            return false;
+        }
+
+        $result = json_decode($curlResult, true);
 
         if (!($result['success'] ?? false)) {
             $errors = $result['error-codes'] ?? ['unavailable'];
             foreach ($errors as $key => $errorCode) {
                 $errors[$key] = self::getErrorMessage($errorCode);
             }
-            $cookie->__set(
-                self::TURNSTILE_SESSION_ERROR_KEY,
+            static::$validationError =
                 Context::getContext()->getTranslator()->trans(
                     'Security validation error:',
                     [],
                     'Modules.Pixelcloudflareturnstile.Shop'
                 ) . ' ' . join(', ', $errors)
-            );
-            Tools::redirect($referer);
+            ;
+
+            return false;
         }
+
+        return true;
     }
 
     /**
@@ -502,6 +578,10 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
                         [
                             'value' => self::FORM_CHECKOUT_REGISTER,
                             'name'  => $this->trans('Checkout Register', [], 'Modules.Pixelcloudflareturnstile.Admin'),
+                        ],
+                        [
+                            'value' => self::FORM_NEWSLETTER,
+                            'name'  => $this->trans('Newsletter', [], 'Modules.Pixelcloudflareturnstile.Admin'),
                         ],
                     ],
                     'id'   => 'value',
