@@ -206,15 +206,12 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     }
 
     /**
-     * Display turnstile widget on the create account form
+     * Display turnstile widget on the newsletter registration form
      *
      * @return string
      */
     public function hookDisplayNewsletterRegistration($params): string
     {
-        if ($this->context->customer->isLogged()) {
-            return '';
-        }
         if (!$this->isAvailable(self::FORM_NEWSLETTER)) {
             return '';
         }
