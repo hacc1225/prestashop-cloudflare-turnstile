@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.2
+- Add Backoffice login and password reset form ([@hacc1225](https://github.com/hacc1225))
+
 ## 1.1.4
 
 - Add newsletter registration form ([@jf-viguier](https://github.com/jf-viguier))

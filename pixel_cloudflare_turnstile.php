@@ -28,6 +28,8 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     public const FORM_CHECKOUT_LOGIN = 'checkout-login';
     public const FORM_CHECKOUT_REGISTER = 'checkout-register';
     public const FORM_NEWSLETTER = 'newsletter';
+    public const FORM_ADMIN_LOGIN = 'admin-login';
+    public const FORM_ADMIN_FORGOT = 'admin-forgot';
 
     protected $templateFile;
 
@@ -39,7 +41,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     public function __construct()
     {
         $this->name = 'pixel_cloudflare_turnstile';
-        $this->version = '1.2.1';
+        $this->version = '1.2.2';
         $this->author = 'Pixel Open';
         $this->tab = 'front_office_features';
         $this->need_instance = 0;
@@ -81,7 +83,12 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
             $this->registerHook('displayCustomerAccountForm') &&
             $this->registerHook('displayNewsletterRegistration') &&
             $this->registerHook('actionNewsletterRegistrationBefore') &&
-            $this->registerHook('actionFrontControllerInitBefore');
+            $this->registerHook('actionFrontControllerInitBefore') &&
+            $this->registerHook('actionAdminLoginControllerLoginBefore') &&
+            $this->registerHook('actionAdminLoginControllerForgotBefore') &&
+            $this->registerHook('displayCloudflareTurnstileWidgetForAdminLogin') &&
+            $this->registerHook('displayCloudflareTurnstileWidgetForAdminForgot') &&
+            $this->registerHook('displayAdminLogin');
     }
 
     /**
@@ -203,7 +210,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
      *
      * @return string
      */
-    public function hookDisplayNewsletterRegistration($params)
+    public function hookDisplayNewsletterRegistration($params): string
     {
         if ($this->context->customer->isLogged()) {
             return '';
@@ -212,7 +219,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
             return '';
         }
 
-        return $this->renderWidget('displayNewsletterRegistration', []);
+        return $this->renderWidget('displayNewsletterRegistration', ['form' => self::FORM_NEWSLETTER]);
     }
 
     /**
@@ -223,7 +230,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
      * @return void
      *
      */
-    public function hookActionNewsletterRegistrationBefore($params)
+    public function hookActionNewsletterRegistrationBefore($params): void
     {
         if ($this->isAvailable(self::FORM_NEWSLETTER)) {
             if (!self::turnstileValidation()) {
@@ -238,6 +245,96 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
                 }
             }
         }
+    }
+
+    /**
+     * Hook to validate back office login
+     * 
+     *  @param array $params
+     * 
+     *  @return void
+     */
+    public function hookActionAdminLoginControllerLoginBefore($params): void
+    {
+        if ($this->isAvailable(self::FORM_ADMIN_LOGIN)) {
+            if (!self::turnstileValidation()) {
+                if (!empty(static::$validationError)) {
+                    $params['controller']->errors[] = static::$validationError;
+                }
+                else {
+                    $params['controller']->errors[] = Context::getContext()->getTranslator()->trans(
+                        'Security validation error',
+                        [],
+                        'Modules.Pixelcloudflareturnstile.Shop'
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * Hook to validate back office forgot password
+     * 
+     *  @param array $params
+     * 
+     *  @return void
+     */
+    public function hookActionAdminLoginControllerForgotBefore($params): void
+    {
+        if ($this->isAvailable(self::FORM_ADMIN_FORGOT)) {
+            if (!self::turnstileValidation()) {
+                if (!empty(static::$validationError)) {
+                    $params['controller']->errors[] = static::$validationError;
+                }
+                else {
+                    $params['controller']->errors[] = Context::getContext()->getTranslator()->trans(
+                        'Security validation error',
+                        [],
+                        'Modules.Pixelcloudflareturnstile.Shop'
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * Hook to add Cloudflare Turnsite Javascript for backoffice login page
+     *
+     *  @param array $params
+     *  @return string
+     */
+    public function hookDisplayAdminLogin($params): string
+    {
+        if ($this->isAvailable(self::FORM_ADMIN_LOGIN) || $this->isAvailable(self::FORM_ADMIN_FORGOT)) {
+            $templateFile = 'module:'.$this->name. '/views/templates/hook/admin-login.tpl';
+            $cacheId = $this->getCacheId();
+            if (!$this->isCached($templateFile, $cacheId)) {
+                $cssPath = $this->getPathUri() . 'views/css/turnstile.css';
+                $this->context->smarty->assign('CSSPath', $cssPath);
+            }
+            return $this->context->smarty->fetch($templateFile, $cacheId);
+        }
+        return '';
+    }
+
+    /**
+     * Hook to display Cloudflare Turnstile Widget for backoffice login
+     * 
+     *  @return string
+     */
+    public function hookDisplayCloudflareTurnstileWidgetForAdminLogin(): string
+    {
+        return $this->renderWidget('displayCloudflareTurnstileWidgetForAdminLogin', ['form' => self::FORM_ADMIN_LOGIN]);
+    }
+
+    /**
+     * Hook to display Cloudflare Turnstile Widget for backoffice reset password
+     * 
+     *  @return string
+     */
+    public function hookDisplayCloudflareTurnstileWidgetForAdminForgot(): string
+    {
+        return $this->renderWidget('displayCloudflareTurnstileWidgetForAdminForgot', ['form' => self::FORM_ADMIN_FORGOT]);
     }
 
     /**
@@ -583,6 +680,14 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
                             'value' => self::FORM_NEWSLETTER,
                             'name'  => $this->trans('Newsletter', [], 'Modules.Pixelcloudflareturnstile.Admin'),
                         ],
+                        [
+                            'value' => self::FORM_ADMIN_LOGIN,
+                            'name'  => $this->trans('Back Office Login', [], 'Modules.Pixelcloudflareturnstile.Admin'),
+                        ],
+                        [
+                            'value' => self::FORM_ADMIN_FORGOT,
+                            'name'  => $this->trans('Back Office Forgot Password', [], 'Modules.Pixelcloudflareturnstile.Admin'),
+                        ],
                     ],
                     'id'   => 'value',
                     'name' => 'name',
@@ -617,7 +722,15 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         $message .= '<br /><strong>Login:</strong><br /> themes/' . $themeName . '/templates/customer/_partials/login-form.tpl';
         $message .= '<br /><code>{widget name=\'pixel_cloudflare_turnstile\' form=\'' . self::FORM_LOGIN . '\'}</code><br />';
         $message .= '<br /><strong>Reset password:</strong><br /> themes/' . $themeName . '/templates/customer/password-email.tpl';
-        $message .= '<br /><code>{widget name=\'pixel_cloudflare_turnstile\' form=\'' . self::FORM_PASSWORD. '\'}</code>';
+        $message .= '<br /><code>{widget name=\'pixel_cloudflare_turnstile\' form=\'' . self::FORM_PASSWORD. '\'}</code><br />';
+        $message .= '<br/><strong>Admin Login:</strong><br /> admin/themes/default/template/controllers/login/content.tpl';
+        $message .= '<br /><code>{hook h="displayCloudflareTurnstileWidgetForAdminLogin"}</code>';
+        $message .= '<br /> js/admin/login.js';
+        $message .= '<br /><code>\'cf-turnstile-response\': $(\'#login_form input[id^="cf-chl-widget-"]\').val()</code><br />';
+        $message .= '<br/><strong>Admin Reset password:</strong><br /> admin/themes/default/template/controllers/login/content.tpl';
+        $message .= '<br /><code>{hook h="displayCloudflareTurnstileWidgetForAdminForgot"}</code>';
+        $message .= '<br /> js/admin/login.js';
+        $message .= '<br /><code>\'cf-turnstile-response\': $(\'#forgot_password_form input[id^="cf-chl-widget-"]\').val()</code>';
 
         $output = '<div class="alert alert-info" style="line-height:22px">' . $message . '</div>';
 

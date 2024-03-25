@@ -9,11 +9,16 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
-function upgrade_module_1_1_4($module)
+function upgrade_module_1_2_2($module)
 {
     return $module->registerHook([
         'displayNewsletterRegistration',
         'actionNewsletterRegistrationBefore',
+        'actionAdminLoginControllerLoginBefore',
+        'actionAdminLoginControllerForgotBefore',
+        'displayCloudflareTurnstileWidgetForAdminLogin',
+        'displayCloudflareTurnstileWidgetForAdminForgot',
+        'displayAdminLogin',
     ]);
 
 }

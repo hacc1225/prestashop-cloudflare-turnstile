@@ -15,6 +15,8 @@
 - Checkout Login
 - Checkout Register
 - Newsletter subscription
+- Backoffice Login
+- Backoffice reset password
 
 ![Cloudflare Turnstile](screenshot.png)
 
@@ -87,6 +89,38 @@ themes/{themeName}/templates/customer/password-email.tpl
 ```smarty
 {widget name='pixel_cloudflare_turnstile' form='password'}
 ```
+
+### Backoffice login
+
+**Template**: 
+
+admin/themes/default/template/controllers/login/content.tpl
+
+**Hook**:
+
+```smarty
+{hook h="displayCloudflareTurnstileWidgetForAdminLogin"}
+```
+
+**js/admin/login.js**
+
+Add `'cf-turnstile-response': $('#login_form input[id^="cf-chl-widget-"]').val()` to the `data` object within the AJAX request of the `doAjaxLogin` function to send the Cloudflare Turnstile verification token during the login process.
+
+### Backoffice reset password
+
+**Template**: 
+
+admin/themes/default/template/controllers/login/content.tpl
+
+**Hook**:
+
+```smarty
+{hook h="displayCloudflareTurnstileWidgetForAdminForgot"}
+```
+
+**js/admin/login.js**
+
+Add the line `'cf-turnstile-response': $('#forgot_password_form input[id^="cf-chl-widget-"]').val()` to the `data` object within the AJAX request of the `doAjaxForgot` function to include the Cloudflare Turnstile verification token.
 
 ## Testing
 
