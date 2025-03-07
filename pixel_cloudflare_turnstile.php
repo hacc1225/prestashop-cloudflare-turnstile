@@ -483,6 +483,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         $data = [
             'secret'   => Configuration::get(self::CONFIG_CLOUDFLARE_TURNSTILE_SECRET_KEY),
             'response' => $response,
+            'remoteip' => Tools::getRemoteAddr(),
         ];
 
         $ch = curl_init();
