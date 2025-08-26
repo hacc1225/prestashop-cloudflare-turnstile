@@ -400,7 +400,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
 
         // Guest Tracking
         if ($controllerClass === 'GuestTrackingController' && $this->isAvailable(self::FORM_GUEST_TRACKING)) {
-            return !($validate && (empty($_POST) || (!Tools::getValue('order_reference') && !Tools::getValue('email'))));
+            return !($validate && (!Tools::getValue('order_reference') && !Tools::getValue('email')));
         }
 
         return false;
