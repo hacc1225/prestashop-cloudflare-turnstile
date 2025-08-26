@@ -30,6 +30,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     public const FORM_NEWSLETTER = 'newsletter';
     public const FORM_ADMIN_LOGIN = 'admin-login';
     public const FORM_ADMIN_FORGOT = 'admin-forgot';
+    public const FORM_GUEST_TRACKING = 'guest-tracking';
 
     protected $templateFile;
 
@@ -421,6 +422,14 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
             return true;
         }
 
+        // Guest Tracking
+        if ($controllerClass === 'GuestTrackingController' && $this->isAvailable(self::FORM_GUEST_TRACKING)) {
+            if ($validate && (empty($_POST) || (!Tools::getValue('order_reference') && !Tools::getValue('email')))) {
+                return false;
+            }
+            return true;
+        }
+
         return false;
     }
 
@@ -686,12 +695,16 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
                             'value' => self::FORM_ADMIN_FORGOT,
                             'name'  => $this->trans('Back Office Forgot Password', [], 'Modules.Pixelcloudflareturnstile.Admin'),
                         ],
+                        [
+                            'value' => self::FORM_GUEST_TRACKING,
+                            'name'  => $this->trans('Guest Order Tracking', [], 'Modules.Pixelcloudflareturnstile.Admin'),
+                        ],
                     ],
                     'id'   => 'value',
                     'name' => 'name',
                 ],
                 'desc' => $this->trans(
-                    'For contact, login and reset password forms, you need to manually add the widget in the template files.',
+                    'For contact, login, reset password and guest tracking forms, you need to manually add the widget in the template files.',
                     [],
                     'Modules.Pixelcloudflareturnstile.Admin'
                 ),
@@ -710,7 +723,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         $themeName = $this->getCurrentThemeName();
 
         $message = $this->trans(
-            'For contact, login and reset password forms, you need to manually add the widget in the template files.',
+            'For contact, login, reset password and guest tracking forms, you need to manually add the widget in the template files.',
             [],
             'Modules.Pixelcloudflareturnstile.Admin'
         );
@@ -721,6 +734,8 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         $message .= '<br /><code>{widget name=\'pixel_cloudflare_turnstile\' form=\'' . self::FORM_LOGIN . '\'}</code><br />';
         $message .= '<br /><strong>Reset password:</strong><br /> themes/' . $themeName . '/templates/customer/password-email.tpl';
         $message .= '<br /><code>{widget name=\'pixel_cloudflare_turnstile\' form=\'' . self::FORM_PASSWORD. '\'}</code><br />';
+        $message .= '<br /><strong>Guest Tracking:</strong><br /> themes/' . $themeName . '/templates/customer/guest-login.tpl';
+        $message .= '<br /><code>{widget name=\'pixel_cloudflare_turnstile\' form=\'' . self::FORM_GUEST_TRACKING . '\'}</code><br />';
         $message .= '<br/><strong>Admin Login:</strong><br /> admin/themes/default/template/controllers/login/content.tpl';
         $message .= '<br /><code>{hook h="displayCloudflareTurnstileWidgetForAdminLogin"}</code>';
         $message .= '<br /> js/admin/login.js';
