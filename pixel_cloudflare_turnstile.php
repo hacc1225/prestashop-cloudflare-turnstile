@@ -42,7 +42,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     public function __construct()
     {
         $this->name = 'pixel_cloudflare_turnstile';
-        $this->version = '1.2.2';
+        $this->version = '1.2.3';
         $this->author = 'Pixel Open';
         $this->tab = 'front_office_features';
         $this->need_instance = 0;
