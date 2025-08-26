@@ -352,31 +352,19 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
             ($this->isAvailable(self::FORM_CHECKOUT_REGISTER) || $this->isAvailable(self::FORM_CHECKOUT_LOGIN))
         ) {
             if ($this->isAvailable(self::FORM_CHECKOUT_REGISTER) && $this->isAvailable(self::FORM_CHECKOUT_LOGIN)) {
-                if ($validate && !(Tools::isSubmit('submitCreate') || Tools::isSubmit('submitLogin'))) {
-                    return false;
-                }
-                return true;
+                return !($validate && !(Tools::isSubmit('submitCreate') || Tools::isSubmit('submitLogin')));
             }
             if ($this->isAvailable(self::FORM_CHECKOUT_REGISTER)) {
-                if ($validate && !Tools::isSubmit('submitCreate')) {
-                    return false;
-                }
-                return true;
+                return !($validate && !Tools::isSubmit('submitCreate'));
             }
             if ($this->isAvailable(self::FORM_CHECKOUT_LOGIN)) {
-                if ($validate && !Tools::isSubmit('submitLogin')) {
-                    return false;
-                }
-                return true;
+                return !($validate && !Tools::isSubmit('submitLogin'));
             }
         }
 
         // Contact
         if ($controllerClass === 'ContactController' && $this->isAvailable(self::FORM_CONTACT)) {
-            if ($validate && !Tools::isSubmit('submitMessage')) {
-                return false;
-            }
-            return true;
+            return !($validate && !Tools::isSubmit('submitMessage'));
         }
 
         // Register
@@ -385,10 +373,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
             Tools::getValue('create_account') &&
             !$isLoggedIn
         ) {
-            if ($validate && !Tools::isSubmit('submitCreate')) {
-                return false;
-            }
-            return true;
+            return !($validate && !Tools::isSubmit('submitCreate'));
         }
 
         // Register Prestashop >= 8.0.0
@@ -396,10 +381,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
             $this->isAvailable(self::FORM_REGISTER) &&
             !$isLoggedIn
         ) {
-            if ($validate && !Tools::isSubmit('submitCreate')) {
-                return false;
-            }
-            return true;
+            return !($validate && !Tools::isSubmit('submitCreate'));
         }
 
         // Login
@@ -408,26 +390,17 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
             !Tools::getValue('create_account') &&
             !$isLoggedIn
         ) {
-            if ($validate && !Tools::isSubmit('submitLogin')) {
-                return false;
-            }
-            return true;
+            return !($validate && !Tools::isSubmit('submitLogin'));
         }
 
         // Reset Password
         if ($controllerClass === 'PasswordController' && $this->isAvailable(self::FORM_PASSWORD)) {
-            if ($validate && (empty($_POST) || (isset($_POST['token'], $_POST['id_customer']) && !isset($_POST['email'])))) {
-                return false;
-            }
-            return true;
+            return !($validate && (empty($_POST) || (isset($_POST['token'], $_POST['id_customer']) && !isset($_POST['email']))));
         }
 
         // Guest Tracking
         if ($controllerClass === 'GuestTrackingController' && $this->isAvailable(self::FORM_GUEST_TRACKING)) {
-            if ($validate && (empty($_POST) || (!Tools::getValue('order_reference') && !Tools::getValue('email')))) {
-                return false;
-            }
-            return true;
+            return !($validate && (empty($_POST) || (!Tools::getValue('order_reference') && !Tools::getValue('email'))));
         }
 
         return false;
