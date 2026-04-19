@@ -94,7 +94,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
             $this->registerHook('actionAdminLoginControllerForgotBefore') &&
             $this->registerHook('displayCloudflareTurnstileWidgetForAdminLogin') &&
             $this->registerHook('displayCloudflareTurnstileWidgetForAdminForgot') &&
-            $this->registerHook('actionAdminLoginControllerSetMedia') &&
+            $this->registerHook('displayAdminLogin') &&
             $this->registerHook('actionBackOfficeLoginForm') &&
             $this->registerHook('actionEmployeeRequestPasswordResetForm');
     }
@@ -148,22 +148,6 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
                 'attributes' => 'async',
             ]
         );
-    }
-
-    /**
-     * Adds CSS and JS to back office login page
-     *
-     * @param array $params
-     * @return void
-     */
-    public function hookActionAdminLoginControllerSetMedia($params): void
-    {
-        if (!$this->isAvailable(self::FORM_ADMIN_LOGIN) && !$this->isAvailable(self::FORM_ADMIN_FORGOT)) {
-            return;
-        }
-
-        $params['controller']->addJS('https://challenges.cloudflare.com/turnstile/v0/api.js');
-        $params['controller']->addCSS($this->getPathUri() . 'views/css/turnstile.css');
     }
 
     /**
@@ -324,6 +308,26 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
                 }
             }
         }
+    }
+
+    /**
+     * Hook to add Cloudflare Turnsite Javascript for backoffice login page
+     *
+     *  @param array $params
+     *  @return string
+     */
+    public function hookDisplayAdminLogin($params): string
+    {
+        if ($this->isAvailable(self::FORM_ADMIN_LOGIN) || $this->isAvailable(self::FORM_ADMIN_FORGOT)) {
+            $templateFile = 'module:'.$this->name. '/views/templates/hook/admin-login.tpl';
+            $cacheId = $this->getCacheId();
+            if (!$this->isCached($templateFile, $cacheId)) {
+                $cssPath = $this->getPathUri() . 'views/css/turnstile.css';
+                $this->context->smarty->assign('CSSPath', $cssPath);
+            }
+            return $this->context->smarty->fetch($templateFile, $cacheId);
+        }
+        return '';
     }
 
     /**
