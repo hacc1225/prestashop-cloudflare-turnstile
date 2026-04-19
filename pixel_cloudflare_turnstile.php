@@ -9,8 +9,13 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
+
 use PrestaShop\PrestaShop\Core\Addon\Theme\ThemeProviderInterface;
 use PrestaShop\PrestaShop\Core\Module\WidgetInterface;
+use PrestaShopBundle\Form\Admin\Type\CustomContentType;
 
 class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
 {
@@ -42,7 +47,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     public function __construct()
     {
         $this->name = 'pixel_cloudflare_turnstile';
-        $this->version = '1.2.3';
+        $this->version = '1.3.0';
         $this->author = 'Pixel Open';
         $this->tab = 'front_office_features';
         $this->need_instance = 0;
@@ -89,7 +94,9 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
             $this->registerHook('actionAdminLoginControllerForgotBefore') &&
             $this->registerHook('displayCloudflareTurnstileWidgetForAdminLogin') &&
             $this->registerHook('displayCloudflareTurnstileWidgetForAdminForgot') &&
-            $this->registerHook('displayAdminLogin');
+            $this->registerHook('actionAdminLoginControllerSetMedia') &&
+            $this->registerHook('actionBackOfficeLoginForm') &&
+            $this->registerHook('actionEmployeeRequestPasswordResetForm');
     }
 
     /**
@@ -117,7 +124,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     /***********/
 
     /**
-     * Adds CSS and JS
+     * Adds CSS and JS to front office
      *
      * @return void
      */
@@ -144,6 +151,22 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     }
 
     /**
+     * Adds CSS and JS to back office login page
+     *
+     * @param array $params
+     * @return void
+     */
+    public function hookActionAdminLoginControllerSetMedia($params): void
+    {
+        if (!$this->isAvailable(self::FORM_ADMIN_LOGIN) && !$this->isAvailable(self::FORM_ADMIN_FORGOT)) {
+            return;
+        }
+
+        $params['controller']->addJS('https://challenges.cloudflare.com/turnstile/v0/api.js');
+        $params['controller']->addCSS($this->getPathUri() . 'views/css/turnstile.css');
+    }
+
+    /**
      * Display turnstile widget on the create account form
      *
      * @return string
@@ -160,7 +183,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     }
 
     /**
-     * Turnstile validation
+     * Turnstile validation for front office
      *
      * @param array $params
      *
@@ -246,14 +269,18 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     }
 
     /**
-     * Hook to validate back office login
-     * 
+     * Hook to validate back office login (PrestaShop < 9)
+     *
      *  @param array $params
-     * 
+     *
      *  @return void
      */
     public function hookActionAdminLoginControllerLoginBefore($params): void
     {
+        if (version_compare(_PS_VERSION_, '9.0.0', '>=')) {
+            return;
+        }
+
         if ($this->isAvailable(self::FORM_ADMIN_LOGIN)) {
             if (!self::turnstileValidation()) {
                 if (!empty(static::$validationError)) {
@@ -271,14 +298,18 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     }
 
     /**
-     * Hook to validate back office forgot password
-     * 
+     * Hook to validate back office forgot password (PrestaShop < 9)
+     *
      *  @param array $params
-     * 
+     *
      *  @return void
      */
     public function hookActionAdminLoginControllerForgotBefore($params): void
     {
+        if (version_compare(_PS_VERSION_, '9.0.0', '>=')) {
+            return;
+        }
+
         if ($this->isAvailable(self::FORM_ADMIN_FORGOT)) {
             if (!self::turnstileValidation()) {
                 if (!empty(static::$validationError)) {
@@ -296,43 +327,75 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     }
 
     /**
-     * Hook to add Cloudflare Turnsite Javascript for backoffice login page
+     * Hook to display Cloudflare Turnstile Widget for backoffice login (Legacy)
      *
-     *  @param array $params
-     *  @return string
-     */
-    public function hookDisplayAdminLogin($params): string
-    {
-        if ($this->isAvailable(self::FORM_ADMIN_LOGIN) || $this->isAvailable(self::FORM_ADMIN_FORGOT)) {
-            $templateFile = 'module:'.$this->name. '/views/templates/hook/admin-login.tpl';
-            $cacheId = $this->getCacheId();
-            if (!$this->isCached($templateFile, $cacheId)) {
-                $cssPath = $this->getPathUri() . 'views/css/turnstile.css';
-                $this->context->smarty->assign('CSSPath', $cssPath);
-            }
-            return $this->context->smarty->fetch($templateFile, $cacheId);
-        }
-        return '';
-    }
-
-    /**
-     * Hook to display Cloudflare Turnstile Widget for backoffice login
-     * 
      *  @return string
      */
     public function hookDisplayCloudflareTurnstileWidgetForAdminLogin(): string
     {
+        if (version_compare(_PS_VERSION_, '9.0.0', '>=')) {
+            return '';
+        }
         return $this->renderWidget('displayCloudflareTurnstileWidgetForAdminLogin', ['form' => self::FORM_ADMIN_LOGIN]);
     }
 
     /**
-     * Hook to display Cloudflare Turnstile Widget for backoffice reset password
-     * 
+     * Hook to display Cloudflare Turnstile Widget for backoffice reset password (Legacy)
+     *
      *  @return string
      */
     public function hookDisplayCloudflareTurnstileWidgetForAdminForgot(): string
     {
+        if (version_compare(_PS_VERSION_, '9.0.0', '>=')) {
+            return '';
+        }
         return $this->renderWidget('displayCloudflareTurnstileWidgetForAdminForgot', ['form' => self::FORM_ADMIN_FORGOT]);
+    }
+
+    /**
+     * Inject Turnstile in Symfony Back Office login form (PrestaShop >= 9)
+     *
+     * @param array $params
+     * @return void
+     */
+    public function hookActionBackOfficeLoginForm(array $params): void
+    {
+        $this->injectTurnstileInSymfonyForm($params['form_builder'], self::FORM_ADMIN_LOGIN);
+    }
+
+    /**
+     * Inject Turnstile in Symfony Back Office forgot password form (PrestaShop >= 9)
+     *
+     * @param array $params
+     * @return void
+     */
+    public function hookActionEmployeeRequestPasswordResetForm(array $params): void
+    {
+        $this->injectTurnstileInSymfonyForm($params['form_builder'], self::FORM_ADMIN_FORGOT);
+    }
+
+    /**
+     * Common method to inject Turnstile in Symfony forms
+     *
+     * @param object $builder
+     * @param string $formType
+     * @return void
+     */
+    private function injectTurnstileInSymfonyForm($builder, string $formType): void
+    {
+        if (!$this->isAvailable($formType)) {
+            return;
+        }
+
+        $builder->add('turnstile_widget', CustomContentType::class, [
+            'template' => '@Modules/pixel_cloudflare_turnstile/views/templates/admin/turnstile_field.html.twig',
+            'label'    => false,
+            'data' => [
+                'sitekey' => $this->getSitekey(),
+                'theme'   => $this->getTheme(),
+                'action'  => $formType,
+            ],
+        ]);
     }
 
     /**
@@ -709,14 +772,17 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         $message .= '<br /><code>{widget name=\'pixel_cloudflare_turnstile\' form=\'' . self::FORM_PASSWORD. '\'}</code><br />';
         $message .= '<br /><strong>Guest Tracking:</strong><br /> themes/' . $themeName . '/templates/customer/guest-login.tpl';
         $message .= '<br /><code>{widget name=\'pixel_cloudflare_turnstile\' form=\'' . self::FORM_GUEST_TRACKING . '\'}</code><br />';
-        $message .= '<br/><strong>Admin Login:</strong><br /> admin/themes/default/template/controllers/login/content.tpl';
-        $message .= '<br /><code>{hook h="displayCloudflareTurnstileWidgetForAdminLogin"}</code>';
-        $message .= '<br /> js/admin/login.js';
-        $message .= '<br /><code>\'cf-turnstile-response\': $(\'#login_form input[id^="cf-chl-widget-"]\').val()</code><br />';
-        $message .= '<br/><strong>Admin Reset password:</strong><br /> admin/themes/default/template/controllers/login/content.tpl';
-        $message .= '<br /><code>{hook h="displayCloudflareTurnstileWidgetForAdminForgot"}</code>';
-        $message .= '<br /> js/admin/login.js';
-        $message .= '<br /><code>\'cf-turnstile-response\': $(\'#forgot_password_form input[id^="cf-chl-widget-"]\').val()</code>';
+
+        if (version_compare(_PS_VERSION_, '9.0.0', '<')) {
+            $message .= '<br/><strong>Admin Login:</strong><br /> admin/themes/default/template/controllers/login/content.tpl';
+            $message .= '<br /><code>{hook h="displayCloudflareTurnstileWidgetForAdminLogin"}</code>';
+            $message .= '<br /> js/admin/login.js';
+            $message .= '<br /><code>\'cf-turnstile-response\': $(\'#login_form input[id^="cf-chl-widget-"]\').val()</code><br />';
+            $message .= '<br/><strong>Admin Reset password:</strong><br /> admin/themes/default/template/controllers/login/content.tpl';
+            $message .= '<br /><code>{hook h="displayCloudflareTurnstileWidgetForAdminForgot"}</code>';
+            $message .= '<br /> js/admin/login.js';
+            $message .= '<br /><code>\'cf-turnstile-response\': $(\'#forgot_password_form input[id^="cf-chl-widget-"]\').val()</code>';
+        }
 
         $output = '<div class="alert alert-info" style="line-height:22px">' . $message . '</div>';
 
@@ -782,7 +848,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
         $helper->table = $this->table;
         $helper->name_controller = $this->name;
         $helper->token = Tools::getAdminTokenLite('AdminModules');
-        $helper->currentIndex = AdminController::$currentIndex . '&' . http_build_query(['configure' => $this->name]);
+        $helper->currentIndex = $this->context->link->getAdminLink('AdminModules', false) . '&' . http_build_query(['configure' => $this->name]);
         $helper->submit_action = 'submit' . $this->name;
 
         $helper->default_form_language = (int) Configuration::get('PS_LANG_DEFAULT');

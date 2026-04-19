@@ -1,0 +1,19 @@
+{
+  "name": "pixel/pixel_cloudflare_turnstile",
+  "description": "Cloudflare Turnstile integration for PrestaShop",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Pixel Développement"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "PixelCloudflareTurnstile\\": "src/"
+    }
+  },
+  "config": {
+    "prepend-autoloader": false
+  },
+  "type": "prestashop-module"
+}

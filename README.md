@@ -48,7 +48,12 @@ Move the downloaded file in the Prestashop **modules** directory and unzip the a
 
 For the registration form, the widget is automatically added with a hook. For "contact", "login" and "reset password" forms, **you need to manually add the widget in the template files**, usually before the validation button.
 
+**Note for PrestaShop 9.x:** For the Backoffice Login and Backoffice Reset Password forms, the widget is **automatically injected**. Manual template modification is only required for PrestaShop < 9.0.
+
 **Never select a form to validate without the widget in the form template.**
+
+> [!NOTE]
+> **For Developers:** This module uses Symfony services for PrestaShop 9.x compatibility. If you are modifying the code, you may need to run `composer dump-autoload` inside the module directory to update the class map.
 
 ## Widget
 
@@ -92,6 +97,10 @@ themes/{themeName}/templates/customer/password-email.tpl
 
 ### Backoffice login
 
+#### PrestaShop 9.x
+Automatic injection. No manual modification required.
+
+#### PrestaShop < 9.0
 **Template**: 
 
 admin/themes/default/template/controllers/login/content.tpl
@@ -108,6 +117,10 @@ Add `'cf-turnstile-response': $('#login_form input[id^="cf-chl-widget-"]').val()
 
 ### Backoffice reset password
 
+#### PrestaShop 9.x
+Automatic injection. No manual modification required.
+
+#### PrestaShop < 9.0
 **Template**: 
 
 admin/themes/default/template/controllers/login/content.tpl

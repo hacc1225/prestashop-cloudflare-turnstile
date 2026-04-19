@@ -1,0 +1,10 @@
+services:
+  _defaults:
+    public: true
+
+  # This class is now autoloadable via PSR-4 in composer.json
+  PixelCloudflareTurnstile\EventListener\TurnstileLoginSubscriber:
+    arguments:
+      - '@router'
+    tags:
+      - { name: kernel.event_subscriber }
