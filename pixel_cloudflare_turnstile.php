@@ -86,6 +86,7 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
     {
         return parent::install() &&
             $this->registerHook('actionFrontControllerSetMedia') &&
+            $this->registerHook('displayHeader') &&
             $this->registerHook('displayCustomerAccountForm') &&
             $this->registerHook('displayNewsletterRegistration') &&
             $this->registerHook('actionNewsletterRegistrationBefore') &&
@@ -138,16 +139,11 @@ class Pixel_cloudflare_turnstile extends Module implements WidgetInterface
                 'priority'   => 100,
             ]
         );
-        $this->context->controller->registerJavascript(
-            'cloudflare-turnstile',
-            'https://challenges.cloudflare.com/turnstile/v0/api.js',
-            [
-                'server'     => 'remote',
-                'position'   => 'head',
-                'priority'   => 100,
-                'attributes' => 'async',
-            ]
-        );
+    }
+
+    public function hookDisplayHeader($params)
+    {
+        return '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>';
     }
 
     /**
